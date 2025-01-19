@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: roommate-backend
+    namespace: roommate
+    labels:
+        app: roommate
+        component: backend
+spec:
+    replicas: 1
+    strategy:
+        type: RollingUpdate
+        rollingUpdate:
+            maxSurge: 1
+            maxUnavailable: 0
+    selector:
+        matchLabels:
+            app: roommate
+            component: backend
+    template:
+        metadata:
+            labels:
+                app: roommate
+                component: backend
+        spec:
+            containers:
+                - name: roommate-backend-container
+                  image: montulll/serverr8:latest
+                  ports:
+                      - containerPort: 3001
+                        name: http
+                  env:
+                      - name: DATABASE_URI
+                        valueFrom:
+                            secretKeyRef:
+                                name: backend-secrets
+                                key: DATABASE_URI
+                      - name: PORT
+                        value: "3001"
+                      - name: ACCESS_TOKEN_SECRET
+                        valueFrom:
+                            secretKeyRef:
+                                name: backend-secrets
+                                key: ACCESS_TOKEN_SECRET
+                      - name: REFRESH_TOKEN_SECRET
+                        valueFrom:
+                            secretKeyRef:
+                                name: backend-secrets
+                                key: REFRESH_TOKEN_SECRET
+                  resources:
+                      requests:
+                          memory: "256Mi"
+                          cpu: "200m"
+                      limits:
+                          memory: "512Mi"
+                          cpu: "500m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: roommate-backend-service
+    namespace: roommate
+    labels:
+        app: roommate
+        component: backend
+spec:
+    type: ClusterIP
+    ports:
+        - port: 3001
+          targetPort: 3001
+          name: backend-port
+    selector:
+        app: roommate
+        component: backend

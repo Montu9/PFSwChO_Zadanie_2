@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: roommate-frontend
+    namespace: roommate
+    labels:
+        app: roommate
+        component: frontend
+spec:
+    replicas: 1
+    strategy:
+        type: RollingUpdate
+        rollingUpdate:
+            maxSurge: 1
+            maxUnavailable: 0
+    selector:
+        matchLabels:
+            app: roommate
+            component: frontend
+    template:
+        metadata:
+            labels:
+                app: roommate
+                component: frontend
+        spec:
+            containers:
+                - name: roommate-frontend-container
+                  image: montulll/clientr8:latest
+                  ports:
+                      - containerPort: 3000
+                        name: http
+                  env:
+                      - name: REACT_APP_API_URL
+                        valueFrom:
+                            secretKeyRef:
+                                name: frontend-secrets
+                                key: API_BASE_URL
+                      - name: NODE_OPTIONS
+                        value: "--max_old_space_size=256"
+                  resources:
+                      requests:
+                          memory: "256Mi"
+                          cpu: "100m"
+                      limits:
+                          memory: "512Mi"
+                          cpu: "300m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: roommate-frontend-service
+    namespace: roommate
+    labels:
+        app: roommate
+        component: frontend
+spec:
+    type: ClusterIP
+    ports:
+        - port: 3000
+          targetPort: 3000
+          name: frontend-port
+    selector:
+        app: roommate
+        component: frontend
