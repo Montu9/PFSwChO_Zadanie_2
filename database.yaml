@@ -22,7 +22,7 @@ metadata:
     namespace: roommate
 spec:
     serviceName: mongo-headless
-    replicas: 1
+    replicas: 1 # Start with a single replica
     selector:
         matchLabels:
             app: mongo
@@ -34,7 +34,14 @@ spec:
             containers:
                 - name: mongo
                   image: mongo:4.2.0
-                  args: ["--auth"]
+                  command:
+                      - "mongod"
+                      - "--bind_ip_all"
+                      - "--replSet"
+                      - "rs0"
+                      - "--keyFile"
+                      - "/etc/mongodb/mongo-keyfile"
+                      - "--auth"
                   ports:
                       - containerPort: 27017
                         name: mongodb
@@ -54,6 +61,14 @@ spec:
                             secretKeyRef:
                                 name: mongo-secrets
                                 key: MONGO_INITDB_DATABASE
+                      - name: POD_NAME
+                        valueFrom:
+                            fieldRef:
+                                fieldPath: metadata.name
+                      - name: POD_NAMESPACE
+                        valueFrom:
+                            fieldRef:
+                                fieldPath: metadata.namespace
                   volumeMounts:
                       - name: mongo-data
                         mountPath: /data/db
@@ -63,6 +78,9 @@ spec:
                       - name: mongo-config
                         mountPath: /etc/mongo
                         readOnly: true
+                      - name: mongo-keyfile
+                        mountPath: /etc/mongodb
+                        readOnly: true
                   resources:
                       requests:
                           memory: "256Mi"
@@ -70,6 +88,7 @@ spec:
                       limits:
                           memory: "512Mi"
                           cpu: "500m"
+
             volumes:
                 - name: mongo-init
                   configMap:
@@ -77,6 +96,10 @@ spec:
                 - name: mongo-config
                   configMap:
                       name: mongo-config
+                - name: mongo-keyfile
+                  secret:
+                      secretName: mongo-keyfile
+                      defaultMode: 0400
     volumeClaimTemplates:
         - metadata:
               name: mongo-data
